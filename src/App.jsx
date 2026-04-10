@@ -37,25 +37,7 @@ function processImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("파일 읽기 실패"));
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("이미지 로드 실패"));
-      img.onload = () => {
-        const MAX = 1200;
-        let w = img.naturalWidth;
-        let h = img.naturalHeight;
-        if (w > MAX || h > MAX) {
-          if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
-      };
-      img.src = e.target.result;
-    };
+    reader.onload = (e) => resolve(e.target.result);
     reader.readAsDataURL(file);
   });
 }
@@ -489,7 +471,7 @@ export default function App() {
       {/* 헤더 */}
       <div style={{
         background: `linear-gradient(135deg, ${selectedSubject?.color} 0%, ${selectedSubject?.color}CC 100%)`,
-        padding: "20px 20px 58px", position: "relative", overflow: "hidden",
+        padding: "20px 20px 52px", position: "relative", overflow: "hidden",
       }}>
         <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.1)" }} />
         <div style={{ position: "relative", color: "#fff" }}>
@@ -497,7 +479,7 @@ export default function App() {
           <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>사진으로 기록하는 나만의 오답노트</div>
         </div>
         <div style={{
-          position: "absolute", bottom: -18, left: "50%", transform: "translateX(-50%)",
+          position: "absolute", bottom: -16, left: "50%", transform: "translateX(-50%)",
           background: "#fff", borderRadius: 999, padding: 4, display: "flex", gap: 2,
           boxShadow: "0 4px 20px rgba(0,0,0,0.12)", whiteSpace: "nowrap",
         }}>
