@@ -35,86 +35,28 @@ function saveFolders(folders) {
 // ── 이미지 처리 (EXIF 방향 보정 + 리사이즈) ─────────────────────
 function processImage(file) {
   return new Promise((resolve, reject) => {
-    const arrReader = new FileReader();
-    arrReader.onerror = () => reject(new Error("파일 읽기 실패"));
-    arrReader.onload = (arrEvent) => {
-      // 1단계: ArrayBuffer로 EXIF orientation 읽기
-      let orientation = 1;
-      try {
-        const view = new DataView(arrEvent.target.result);
-        if (view.getUint16(0, false) === 0xFFD8) {
-          let offset = 2;
-          while (offset < view.byteLength) {
-            const marker = view.getUint16(offset, false);
-            offset += 2;
-            if (marker === 0xFFE1) {
-              if (view.getUint32(offset += 2, false) === 0x45786966) {
-                const little = view.getUint16(offset += 6, false) === 0x4949;
-                offset += view.getUint32(offset + 4, little);
-                const tags = view.getUint16(offset, little);
-                offset += 2;
-                for (let i = 0; i < tags; i++) {
-                  if (view.getUint16(offset + i * 12, little) === 0x0112) {
-                    orientation = view.getUint16(offset + i * 12 + 8, little);
-                    break;
-                  }
-                }
-              }
-              break;
-            } else if ((marker & 0xFF00) !== 0xFF00) break;
-            else offset += view.getUint16(offset, false);
-          }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("파일 읽기 실패"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("이미지 로드 실패"));
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > MAX || h > MAX) {
+          if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
         }
-      } catch {}
-
-      // 2단계: DataURL로 이미지 로드 후 canvas에 방향 보정하여 그리기
-      const urlReader = new FileReader();
-      urlReader.onerror = () => reject(new Error("이미지 읽기 실패"));
-      urlReader.onload = (urlEvent) => {
-        const img = new Image();
-        img.onerror = () => reject(new Error("이미지 로드 실패"));
-        img.onload = () => {
-          try {
-            const MAX = 1200;
-            let sw = img.naturalWidth;
-            let sh = img.naturalHeight;
-
-            // 리사이즈 계산
-            if (sw > MAX || sh > MAX) {
-              if (sw >= sh) { sh = Math.round(sh * MAX / sw); sw = MAX; }
-              else { sw = Math.round(sw * MAX / sh); sh = MAX; }
-            }
-
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-
-            // orientation 5,6,7,8은 가로세로 뒤바뀜
-            const swapped = [5, 6, 7, 8].includes(orientation);
-            canvas.width  = swapped ? sh : sw;
-            canvas.height = swapped ? sw : sh;
-
-            ctx.save();
-            switch (orientation) {
-              case 2: ctx.transform(-1, 0, 0,  1, canvas.width, 0); break;
-              case 3: ctx.transform(-1, 0, 0, -1, canvas.width, canvas.height); break;
-              case 4: ctx.transform( 1, 0, 0, -1, 0, canvas.height); break;
-              case 5: ctx.transform( 0, 1, 1,  0, 0, 0); break;
-              case 6: ctx.transform( 0, 1,-1,  0, canvas.height, 0); break;
-              case 7: ctx.transform( 0,-1,-1,  0, canvas.height, canvas.width); break;
-              case 8: ctx.transform( 0,-1, 1,  0, 0, canvas.width); break;
-              default: break;
-            }
-            ctx.drawImage(img, 0, 0, sw, sh);
-            ctx.restore();
-
-            resolve(canvas.toDataURL("image/jpeg", 0.85));
-          } catch (err) { reject(err); }
-        };
-        img.src = urlEvent.target.result;
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
       };
-      urlReader.readAsDataURL(file);
+      img.src = e.target.result;
     };
-    arrReader.readAsArrayBuffer(file);
+    reader.readAsDataURL(file);
   });
 }
 
